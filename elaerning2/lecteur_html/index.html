@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Installation électrique chez le client — Académie Fnac Darty</title>
+<style>
+:root{--navy:#0E2841;--red:#C8102E;--ok:#1B7F3B;--gold:#D99100;--bg:#f4f4f4}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#111;color:#1a1a1a}
+#app{display:flex;flex-direction:column;height:100%}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#111;position:relative;overflow:auto}
+#stage img{max-width:100%;max-height:100%;display:block;background:#fff}
+.panel{background:#fff;width:min(960px,96%);margin:auto;border-radius:14px;padding:26px 30px;box-shadow:0 6px 24px #0006}
+.panel h2{font:italic bold 28px "Times New Roman",serif;color:#FF0000;margin:0 0 6px}
+.tag{font-size:13px;font-weight:bold;color:var(--navy);letter-spacing:.04em;margin-bottom:10px}
+.q{font-size:20px;margin:8px 0 16px;line-height:1.35}
+.opt{display:flex;gap:12px;align-items:flex-start;border:2px solid #cfcfcf;border-radius:10px;padding:12px 14px;margin:9px 0;cursor:pointer;background:#fafafa;font-size:17px}
+.opt:hover{border-color:var(--navy)}.opt.sel{border-color:var(--navy);background:#e4ecf7}
+.opt.good{border-color:var(--ok);background:#e7f4ea}.opt.bad{border-color:var(--red);background:#fce8ea}
+.opt.miss{border-color:var(--ok);border-style:dashed}
+.opt input{margin-top:4px;transform:scale(1.3)}
+.fb{border-radius:10px;padding:14px 16px;margin-top:14px;font-size:16px;line-height:1.4}
+.fb.ok{background:#e7f4ea;border:2px solid var(--ok)}.fb.ko{background:#fce8ea;border:2px solid var(--red)}
+.fb b.t{display:block;font-size:18px;margin-bottom:4px}
+button{font:bold 16px Arial;border:0;border-radius:22px;padding:11px 24px;background:var(--navy);color:#fff;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}button.sec{background:#fff;color:var(--navy);border:2px solid var(--navy)}
+.row{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+#bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--navy);color:#fff;font-size:14px}
+#bar button{padding:8px 18px;font-size:14px;background:#fff;color:var(--navy)}
+#bar button.tg{background:transparent;color:#fff;border:1px solid #fff}#bar button.tg.on{background:#fff;color:var(--navy)}
+#prog{flex:1;height:8px;background:#ffffff40;border-radius:4px;overflow:hidden}#prog i{display:block;height:100%;background:var(--gold);width:0}
+#script{display:none;background:#fff;padding:10px 20px;font-size:15px;line-height:1.45;border-top:3px solid var(--gold);max-height:22vh;overflow:auto}
+.big{font-size:56px;font-weight:bold;color:var(--navy)}.pass{color:var(--ok)}.fail{color:var(--red)}
+ul{margin:6px 0 0 18px;padding:0}
+</style></head><body><div id="app">
+<div id="stage"></div>
+<div id="script"></div>
+<div id="bar"><button id="prev">‹ Précédent</button><div id="prog"><i></i></div><span id="cnt"></span>
+<button class="tg" id="tv">🔊 Voix off</button><button class="tg" id="ts">Script</button><button id="next">Suivant ›</button></div></div>
+<script>
+const D={
+ "quiz": [
+  {
+   "q": "Lave-linge. Vous mesurez : phase↔neutre 230 V, phase↔terre 200 V, neutre↔terre 30 V. Que faites-vous ?",
+   "multi": false,
+   "opts": [
+    "Je branche : il y a bien 230 V",
+    "Je ne branche pas : mauvaise terre. J'oriente le client vers un électricien et je trace",
+    "Je branche et je préviens le client après",
+    "Je change la prise moi-même"
+   ],
+   "ok": [
+    1
+   ],
+   "why": "Plus de 5 V entre neutre et terre = mauvaise terre. On ne branche pas, le client fait appel à un électricien et on trace.",
+   "rev": "Séquence 2 · Trois défauts"
+  },
+  {
+   "q": "Four à installer. Quelles actions relèvent de vos limites d'intervention ?",
+   "multi": true,
+   "opts": [
+    "Contrôler la prise avec un VAT",
+    "Lire l'étiquette du disjoncteur au tableau",
+    "Remplacer le disjoncteur par un calibre adapté",
+    "Photographier une anomalie constatée"
+   ],
+   "ok": [
+    0,
+    1,
+    3
+   ],
+   "why": "Vous contrôlez, repérez et signalez. Remplacer un disjoncteur modifie l'installation : c'est le travail d'un électricien.",
+   "rev": "Séquence 1 · Mon rôle"
+  },
+  {
+   "q": "Lave-vaisselle. La prise voisine alimente aussi un téléviseur et une cafetière, via une multiprise. Que faites-vous ?",
+   "multi": false,
+   "opts": [
+    "Je branche : la prise est derrière le lave-vaisselle",
+    "Je branche sur la multiprise pour aller plus vite",
+    "Je ne branche pas : multiprise interdite et prise probablement confort. J'oriente le client et je trace",
+    "Je débranche la cafetière et je branche"
+   ],
+   "ok": [
+    2
+   ],
+   "why": "Multiprise, triplette et rallonge sont interdites pour un GEM de classe I. Plusieurs usages sur la ligne = suspicion de prise confort : doute = refus.",
+   "rev": "Séquence 2 · Dédiée ou confort"
+  },
+  {
+   "q": "Plaque de cuisson : ligne 6 mm² protégée en 32 A, appareil avec fiche 16 A. Le client veut une prise 16 A tout de suite.",
+   "multi": false,
+   "opts": [
+    "Je pose une prise femelle 16 A : 6 mm² suffit",
+    "Je remplace le disjoncteur 32 A par un 16 A",
+    "Je ne pose pas la prise : le client fait adapter la protection par un électricien, je trace",
+    "Je coupe des brins pour entrer dans la prise"
+   ],
+   "ok": [
+    2
+   ],
+   "why": "Le blocage est la protection 32 A, pas la section. Vous ne modifiez pas la protection : le client fait intervenir un électricien.",
+   "rev": "Séquence 3 · Prise 16 A sur 32 A"
+  },
+  {
+   "q": "Que signifie « être habilité BS » pour un livreur-installateur ?",
+   "multi": false,
+   "opts": [
+    "Savoir travailler en sécurité face au risque électrique ; ce n'est pas une formation de métier",
+    "Pouvoir modifier le tableau électrique du client",
+    "Être électricien",
+    "Pouvoir remplacer les disjoncteurs"
+   ],
+   "ok": [
+    0
+   ],
+   "why": "L'habilitation atteste la capacité à travailler en sécurité. Elle ne remplace pas la compétence métier et ne fait pas de vous un électricien.",
+   "rev": "Séquence 1 · Habilitation"
+  },
+  {
+   "q": "Table de cuisson : les fils portent des bagues (ferrules) qui ne rentrent pas dans le bornier de la prise. Cochez toutes les actions INTERDITES.",
+   "multi": true,
+   "opts": [
+    "Couper ou retirer la bague",
+    "Diminuer la section du conducteur",
+    "Forcer le raccordement",
+    "Utiliser du matériel compatible ou signaler la non-conformité"
+   ],
+   "ok": [
+    0,
+    1,
+    2
+   ],
+   "why": "Il est interdit de couper la bague, de diminuer la section ou de forcer. La bonne pratique : matériel compatible, sinon signalement.",
+   "rev": "Séquence 3 · Bagues"
+  },
+  {
+   "q": "Chez un client, vous voyez des dominos. Quelles affirmations sont exactes ?",
+   "multi": true,
+   "opts": [
+    "Les dominos sont tolérés s'ils sont adaptés à la section, bien serrés et accessibles",
+    "Les connecteurs Wago d'origine sont fortement préconisés",
+    "Un Wago convient pour toutes les sections",
+    "Des fils torsadés avec du ruban adhésif sont acceptables"
+   ],
+   "ok": [
+    0,
+    1
+   ],
+   "why": "Toujours vérifier la section admise. Les épissures (fils torsadés + ruban) sont interdites, et un Wago n'est pas compatible avec toutes les sections.",
+   "rev": "Séquence 3 · Dominos et Wago"
+  },
+  {
+   "q": "Plaque livrée pour un raccordement 6 mm² monophasé ; l'installation du client est en triphasé (câble 5 × 2,5 mm²). Que faites-vous ?",
+   "multi": false,
+   "opts": [
+    "J'adapte le couplage de l'appareil en triphasé",
+    "Je coupe des brins pour entrer dans le bornier",
+    "Je constate l'incompatibilité, j'informe le client, je trace et j'applique la procédure",
+    "Je branche sur une seule phase du câble 2,5 mm²"
+   ],
+   "ok": [
+    2
+   ],
+   "why": "Vous ne modifiez ni le câblage, ni la section, ni le couplage. Vous constatez, informez, tracez.",
+   "rev": "Séquence 3 · Mono / triphasé"
+  },
+  {
+   "q": "L'appareil est livré avec un câble sans fiche. Si l'entreprise autorise la pose d'une fiche mâle, quelle méthode respecte les règles de l'art ?",
+   "multi": false,
+   "opts": [
+    "Dénuder sans couper de brins, poser un embout adapté à la section, sertir avec une pince appropriée",
+    "Tordre les brins et serrer la vis",
+    "Couper des brins pour entrer dans la fiche",
+    "Raccorder sans embout si le fil est souple"
+   ],
+   "ok": [
+    0
+   ],
+   "why": "Dénudage soigné, embout de câblage adapté, sertissage à la pince appropriée. Sans embout, le raccordement n'est pas conforme.",
+   "rev": "Séquence 3 · Fiche mâle"
+  },
+  {
+   "q": "Pot cassé : vous ne pouvez pas brancher le lave-linge. Que faites-vous avant de partir ?",
+   "multi": true,
+   "opts": [
+    "Je laisse l'appareil débranché",
+    "Je mentionne le branchement non effectué dans le dossier Nomad",
+    "Je photographie l'anomalie",
+    "Je branche sur une rallonge pour dépanner"
+   ],
+   "ok": [
+    0,
+    1,
+    2
+   ],
+   "why": "Appareil débranché, photo, trace dans Nomad. La rallonge est interdite pour un GEM de classe I.",
+   "rev": "Séquence 3 · Conduite à tenir et Nomad"
+  }
+ ],
+ "narr": {
+  "1": "Bienvenue dans ce module de l'Académie Fnac Darty, consacré à l'installation électrique chez le client.",
+  "2": "En une vingtaine de minutes, vous allez voir ce que vous avez le droit de faire, et ce que vous devez refuser, quand vous installez un gros électroménager ou un téléviseur chez un client. Trois séquences, puis un quiz de dix questions. Pour valider, il faut au moins huit bonnes réponses. Cliquez sur Commencer.",
+  "3": "Vous arrivez chez le client pour installer un appareil. La prise ne correspond pas à la fiche, et le client est pressé. Qu'avez-vous le droit de faire ? Et que devez-vous refuser ? Ce module vous donne la règle.",
+  "4": "Votre rôle, c'est de contrôler. Vous pouvez identifier visuellement l'installation, contrôler la prise avec un V.A.T., lire le repérage au tableau, constater et signaler une anomalie, et refuser le raccordement en cas de doute. En revanche, vous ne modifiez jamais l'installation du client. Règle d'or : au moindre doute, vous ne branchez pas.",
+  "5": "Ne confondez pas. L'habilitation électrique atteste que vous savez travailler en sécurité face au risque électrique. Ce n'est pas une formation au métier d'électricien. Votre compétence métier, c'est reconnaître une section, identifier une installation conforme, connaître vos limites. L'employeur vérifie ces compétences et vous fournit les outils nécessaires.",
+  "6": "Après vos contrôles, trois décisions seulement. Tout est conforme : j'installe. Un défaut empêche le raccordement : je ne raccorde pas, j'informe le client et je trace. Une mise en conformité est nécessaire : le client fait intervenir un électricien. En cas de doute, je ne branche pas.",
+  "7": "Un seul appareil est réglementaire pour vérifier l'absence de tension : le V.A.T. Ni le multimètre, ni le tournevis testeur ne le remplacent. Il est conforme à la norme N.F.C. 18-510 et porte le marquage E.N. 61243-3. Les équipements de protection sont obligatoires.",
+  "8": "Avant et après chaque mesure, testez votre V.A.T. Pointe rouge sur plus, cordon noir sur COM, pointes en contact, bouton auto-test maintenu. Tous les voyants s'allument et le bip retentit : il est utilisable. Sinon, vérifiez cordons et piles. Échec persistant : V.A.T. hors service.",
+  "9": "Avant chaque branchement d'un gros électroménager, contrôlez la prise sur tous les conducteurs actifs, neutre compris. Mesurez phase-neutre, phase-terre, puis neutre-terre. Sur une prise conforme, vous lisez environ 230 volts entre phase et neutre, 230 volts entre phase et terre, et zéro volt entre neutre et terre. Là, le branchement est autorisé.",
+  "10": "Trois défauts sont bloquants. Mauvaise terre : plus de cinq volts entre neutre et terre. Absence de terre : aucune tension entre phase et terre. Neutre coupé : zéro volt, mais les voyants du V.A.T. clignotent. Dans les trois cas, je ne branche pas, j'informe le client et je trace.",
+  "11": "À vous de décider. Lave-linge à installer. Vous mesurez : phase-neutre 230 volts, phase-terre 200 volts, neutre-terre 30 volts. Vous branchez ? Cliquez sur votre réponse.",
+  "12": "Exact. Plus de cinq volts entre neutre et terre : c'est une mauvaise terre. On ne branche pas, le client fait appel à un électricien, et on trace.",
+  "13": "Pas tout à fait. Dès que la tension entre neutre et terre dépasse cinq volts, c'est une mauvaise terre : on ne branche pas, même si la tension est présente. Le client fait appel à un électricien, et on trace.",
+  "14": "Sur le tableau, repérez le différentiel : bouton T ou TEST, et sensibilité trente milliampères, qui protège les personnes. Pour un lave-linge ou une plaque de cuisson, il doit être de type A ou F. Vous repérez, vous ne modifiez rien.",
+  "15": "Vérifiez le disjoncteur. Lave-linge, lave-vaisselle, sèche-linge, four : en général vingt ampères et deux virgule cinq millimètres carrés. Plaque de cuisson monophasée : trente-deux ampères et six millimètres carrés. Protection non adaptée : vous ne remplacez rien, le client fait intervenir un électricien.",
+  "16": "Pour retrouver le bon disjoncteur : un, lisez l'étiquette du tableau. Deux, si le tableau n'est pas repéré, appareil en marche, abaissez un disjoncteur à la fois et réenclenchez-le. Trois, si vous êtes habilité et formé, utilisez le V.A.T. sur la prise. Un doute ? Pas de branchement.",
+  "17": "Prise dédiée ou confort ? Jamais sur l'apparence. Un : observez, une prise derrière le lave-linge n'est qu'un indice. Deux : regardez le tableau, repéré lave-linge, lave-vaisselle, sèche-linge, four. Trois : vérifiez les usages. Plusieurs prises, multiprise, téléviseur ou cafetière branchés : suspicion de prise confort.",
+  "18": "Ne vous fiez pas à la grosseur du fil. Un : lisez le marquage. Deux : comparez avec les repères de l'outil. Trois : vérifiez le disjoncteur. Six millimètres carrés correspondent couramment à une cuisson en trente-deux ampères. Vous ne démontez rien et vous ne coupez jamais le câble.",
+  "19": "Interdits formels pour un gros électroménager de classe un : multiprise, triplette ou rallonge ; prise moulée coupée ; prise seize ampères sur un cordon non équipé d'usine ; socle sur dominos ; branchement sans terre ; moins de soixante centimètres d'une douche ; top d'un pose libre retiré hors consigne ; deux produits sur un même boîtier.",
+  "20": "Pourquoi ne jamais couper une prise moulée ? Elle est fournie par le constructeur comme un ensemble indissociable : elle garantit l'isolation, la protection contre les contacts directs, la conformité du produit et la sécurité de l'utilisateur. Une fois coupée, le produit n'est plus conforme et des risques d'échauffement, de mauvais raccordement ou d'électrisation apparaissent.",
+  "21": "Un appareil prévu en six millimètres carrés monophasé ne s'adapte jamais sur une installation triphasée en deux virgule cinq. Pas de modification du câblage, de la section ou du couplage, pas de brins coupés. Je constate, j'informe le client, je trace, j'applique la procédure.",
+  "22": "Pot d'encastrement absent, cassé ou desserré, placo dégradé, prise qui sort du mur : puis-je installer la prise ? Non. La fixation n'est plus garantie et les conducteurs sont accessibles. Je ne remets pas le mur en conformité : j'arrête, je photographie, je rédige le compte rendu et je laisse l'appareil débranché.",
+  "23": "Six millimètres carrés, disjoncteur trente-deux ampères, appareil avec fiche seize ampères. Une prise seize ampères exige une protection adaptée : elle ne se raccorde pas sur une ligne qui garde un trente-deux ampères. Vous ne remplacez pas le disjoncteur. Le client le fait adapter par un électricien. Vous informez et vous tracez.",
+  "24": "Les dominos sont tolérés s'ils sont adaptés à la section, bien serrés et accessibles. Les fils torsadés avec ruban sont interdits. Les Wago d'origine sont fortement préconisés, mais vérifiez la section admise. Et ne retirez jamais un domino du client pour le remplacer.",
+  "25": "Fils équipés de bagues qui ne rentrent pas dans le bornier : interdit de couper ou retirer la bague, de diminuer la section ou de forcer. Pour une table de cuisson en biphasé ou triphasé, le débaguage demande une pince et un embout à sertir. Sinon, matériel compatible ou signalement.",
+  "26": "Fiche mâle au bout du câble de l'appareil : aucune norme explicite ne l'interdit si les règles de l'art sont respectées. Dénudez sans couper de brins, posez un embout adapté à la section, sertissez avec une pince appropriée. Sans embout, ce n'est pas conforme. Selon la consigne de votre entreprise.",
+  "27": "Quand vous ne pouvez pas raccorder, la conduite à tenir est toujours la même, en cinq étapes. Un : je m'arrête, sans adaptation improvisée. Deux : j'informe le client, qui fait appel à un électricien. Trois : je photographie l'anomalie. Quatre : je laisse l'appareil débranché. Cinq : je trace dans le dossier Nomad.",
+  "28": "Tout branchement non effectué doit être mentionné dans le dossier Nomad : l'appareil est laissé débranché au départ du livreur. Joignez la photographie de l'anomalie et rédigez un compte rendu d'intervention. Votre trace protège le client, vous et l'entreprise.",
+  "29": "Mise en situation. Vous installez un lave-linge. La prise murale est abîmée : le pot est desserré, le placo s'effrite. Le client insiste : branchez, c'est urgent, mon beau-frère s'en occupera. Que faites-vous ? Cliquez sur votre réponse.",
+  "30": "Exact. Pot cassé ou placo dégradé : on arrête le raccordement, on photographie, on laisse l'appareil débranché et on trace dans Nomad. Le client fait intervenir un électricien.",
+  "31": "Pas tout à fait. Vous ne remettez pas l'installation en conformité, et la multiprise est interdite. La bonne réponse : appareil débranché, photo, explication au client, trace dans Nomad.",
+  "32": "À retenir. Je contrôle : le V.A.T., la terre, le différentiel, le disjoncteur et la section. Je décide : j'installe, ou je refuse, ou le client fait appel à un électricien. Je trace : photo, appareil débranché, dossier Nomad. Au moindre doute, je ne branche pas. Place au quiz.",
+  "33": "Place au quiz final. Dix mises en situation. Certaines questions ont une seule bonne réponse, d'autres plusieurs. Après chaque réponse, vous voyez la correction et l'explication. Il faut au moins huit bonnes réponses sur dix pour valider.",
+  "34": "Question 1. Lave-linge. Vous mesurez : phase↔neutre 230 V, phase↔terre 200 V, neutre↔terre 30 V. Que faites-vous ? Une seule réponse est correcte.",
+  "35": "Bonne réponse : B. Plus de 5 V entre neutre et terre = mauvaise terre. On ne branche pas, le client fait appel à un électricien et on trace.",
+  "36": "Question 2. Four à installer. Quelles actions relèvent de vos limites d'intervention ? Plusieurs réponses sont possibles.",
+  "37": "Bonnes réponses : A, B et D. Vous contrôlez, repérez et signalez. Remplacer un disjoncteur modifie l'installation : c'est le travail d'un électricien.",
+  "38": "Question 3. Lave-vaisselle. La prise voisine alimente aussi un téléviseur et une cafetière, via une multiprise. Que faites-vous ? Une seule réponse est correcte.",
+  "39": "Bonne réponse : C. Multiprise, triplette et rallonge sont interdites pour un GEM de classe I. Plusieurs usages sur la ligne = suspicion de prise confort : doute = refus.",
+  "40": "Question 4. Plaque de cuisson : ligne 6 mm² protégée en 32 A, appareil avec fiche 16 A. Le client veut une prise 16 A tout de suite. Une seule réponse est correcte.",
+  "41": "Bonne réponse : C. Le blocage est la protection 32 A, pas la section. Vous ne modifiez pas la protection : le client fait intervenir un électricien.",
+  "42": "Question 5. Que signifie « être habilité BS » pour un livreur-installateur ? Une seule réponse est correcte.",
+  "43": "Bonne réponse : A. L'habilitation atteste la capacité à travailler en sécurité. Elle ne remplace pas la compétence métier et ne fait pas de vous un électricien.",
+  "44": "Question 6. Table de cuisson : les fils portent des bagues (ferrules) qui ne rentrent pas dans le bornier de la prise. Cochez toutes les actions INTERDITES. Plusieurs réponses sont possibles.",
+  "45": "Bonnes réponses : A, B et C. Il est interdit de couper la bague, de diminuer la section ou de forcer. La bonne pratique : matériel compatible, sinon signalement.",
+  "46": "Question 7. Chez un client, vous voyez des dominos. Quelles affirmations sont exactes ? Plusieurs réponses sont possibles.",
+  "47": "Bonnes réponses : A et B. Toujours vérifier la section admise. Les épissures (fils torsadés + ruban) sont interdites, et un Wago n'est pas compatible avec toutes les sections.",
+  "48": "Question 8. Plaque livrée pour un raccordement 6 mm² monophasé ; l'installation du client est en triphasé (câble 5 × 2,5 mm²). Que faites-vous ? Une seule réponse est correcte.",
+  "49": "Bonne réponse : C. Vous ne modifiez ni le câblage, ni la section, ni le couplage. Vous constatez, informez, tracez.",
+  "50": "Question 9. L'appareil est livré avec un câble sans fiche. Si l'entreprise autorise la pose d'une fiche mâle, quelle méthode respecte les règles de l'art ? Une seule réponse est correcte.",
+  "51": "Bonne réponse : A. Dénudage soigné, embout de câblage adapté, sertissage à la pince appropriée. Sans embout, le raccordement n'est pas conforme.",
+  "52": "Question 10. Pot cassé : vous ne pouvez pas brancher le lave-linge. Que faites-vous avant de partir ? Plusieurs réponses sont possibles.",
+  "53": "Bonnes réponses : A, B et C. Appareil débranché, photo, trace dans Nomad. La rallonge est interdite pour un GEM de classe I.",
+  "54": "Huit bonnes réponses sur dix, ou plus : module validé, bravo. Sinon, revoyez les séquences indiquées puis refaites le quiz. Sur le terrain : je contrôle, je décide, je trace, et au moindre doute je ne branche pas."
+ },
+ "titles": {
+  "1": "Installation électrique chez le client : ce que je peux faire… et ce que je refuse",
+  "2": "Bienvenue : ce que vous allez voir",
+  "3": "Chez le client : prise, plaque à domino… que faites-vous ?",
+  "4": "Mon rôle : je contrôle, je ne modifie pas",
+  "5": "Habilitation électrique et compétence métier",
+  "6": "Trois décisions possibles après mes contrôles",
+  "7": "Le VAT : le seul appareil réglementaire",
+  "8": "Avant chaque contrôle : l'auto-test du VAT",
+  "9": "Contrôler la prise : les valeurs d'une prise conforme",
+  "10": "Trois défauts qui interdisent le branchement",
+  "11": "À vous : vous branchez ?",
+  "12": "Bonne réponse !",
+  "13": "Pas tout à fait",
+  "14": "Vérifier le dispositif différentiel 30 mA",
+  "15": "Vérifier le disjoncteur adapté à l'appareil",
+  "16": "Retrouver le disjoncteur de mon appareil",
+  "17": "Prise dédiée ou prise confort ?",
+  "18": "Section des fils : trois étapes, jamais « à l'œil »",
+  "19": "Interdits formels pour un gros électroménager de classe I",
+  "20": "Une prise moulée se branche, elle ne se coupe pas",
+  "21": "Plaque en 6 mm² mono : jamais adaptée sur du triphasé 2,5 mm²",
+  "22": "Pot d'encastrement absent ou abîmé, placo dégradé",
+  "23": "Prise femelle 16 A sur une ligne 6 mm² / 32 A",
+  "24": "Dominos et connecteurs Wago",
+  "25": "Fils équipés de bagues (ferrules) et tables de cuisson",
+  "26": "Poser une fiche mâle sur le câble de l'appareil",
+  "27": "Je ne peux pas raccorder : la conduite à tenir",
+  "28": "Tracer dans Nomad : l'appareil laissé débranché",
+  "29": "Mise en situation : « Branchez, mon beau-frère réparera »",
+  "30": "Bonne réponse !",
+  "31": "Pas tout à fait",
+  "32": "À retenir : contrôler, décider, tracer",
+  "33": "Quiz final : 10 questions, 80 % pour valider",
+  "34": "Question 1 / 10",
+  "35": "Correction · question 1 / 10",
+  "36": "Question 2 / 10",
+  "37": "Correction · question 2 / 10",
+  "38": "Question 3 / 10",
+  "39": "Correction · question 3 / 10",
+  "40": "Question 4 / 10",
+  "41": "Correction · question 4 / 10",
+  "42": "Question 5 / 10",
+  "43": "Correction · question 5 / 10",
+  "44": "Question 6 / 10",
+  "45": "Correction · question 6 / 10",
+  "46": "Question 7 / 10",
+  "47": "Correction · question 7 / 10",
+  "48": "Question 8 / 10",
+  "49": "Correction · question 8 / 10",
+  "50": "Question 9 / 10",
+  "51": "Correction · question 9 / 10",
+  "52": "Question 10 / 10",
+  "53": "Correction · question 10 / 10",
+  "54": "Votre résultat : 8 bonnes réponses sur 10 pour valider"
+ },
+ "defis": {
+  "defi1": {
+   "n": 11,
+   "title": "À vous : vous branchez ?",
+   "q": "Lave-linge. Mesures : 230 V / 200 V / 30 V.\nVous branchez ?",
+   "opts": [
+    "Oui, la tension est présente",
+    "Non : mauvaise terre, j'oriente le client vers un électricien et je trace",
+    "Oui, mais je préviens le client après"
+   ],
+   "ok": 1,
+   "why": "Neutre ↔ Terre > 5 V = mauvaise terre Je ne branche pas, le client fait appel à un électricien Je trace l'anomalie Règle : neutre ↔ terre > 5 V = je ne branche pas"
+  },
+  "situ": {
+   "n": 29,
+   "title": "Mise en situation : « Branchez, mon beau-frère réparera »",
+   "q": "Lave-linge à installer. Pot desserré, placo effrité. Le client insiste : « Branchez, c'est urgent ! »",
+   "opts": [
+    "Je rebouche vite fait et je branche : le client est d'accord",
+    "Je laisse l'appareil débranché, je photographie, j'explique au client et je trace dans Nomad",
+    "Je branche sur une multiprise posée au sol"
+   ],
+   "ok": 1,
+   "why": "Pot cassé ou placo dégradé : arrêt du raccordement Photo · appareil débranché · trace dans Nomad Le client fait intervenir un électricien Règle : pot ou placo abîmé = j'arrête, je photographie, je trace"
+  }
+ }
+};
+// ---------- SCORM 1.2 ----------
+const S=(function(){let api=null,w=window,t=0;while(!w.API&&w.parent&&w.parent!==w&&t++<10)w=w.parent;api=w.API||null;
+ const o={ok:!!api,init(){if(api)api.LMSInitialize("")},get(k){return api?api.LMSGetValue(k):""},set(k,v){if(api)api.LMSSetValue(k,String(v))},commit(){if(api)api.LMSCommit("")},fin(){if(api){api.LMSCommit("");api.LMSFinish("")}}};return o})();
+S.init();
+let st=S.get("cmi.core.lesson_status");if(!st||st==="not attempted")S.set("cmi.core.lesson_status","incomplete");
+// ---------- Steps ----------
+const IMG=[1,2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,32,33];
+const steps=[];
+IMG.forEach(n=>{ if(n===14) steps.push({t:"defi",k:"defi1"}); steps.push({t:"img",n}); if(n===28) steps.push({t:"defi",k:"situ"}); });
+// order fix: defi1 after slide 10, situ after slide 28
+const order=[];IMG.forEach(n=>{order.push({t:"img",n});if(n===10)order.push({t:"defi",k:"defi1"});if(n===28)order.push({t:"defi",k:"situ"});});
+steps.length=0;order.forEach(s=>steps.push(s));
+D.quiz.forEach((q,i)=>steps.push({t:"quiz",i}));steps.push({t:"result"});
+const firstQuiz=steps.findIndex(s=>s.t==="quiz");
+let cur=0,answers=new Array(10).fill(null),voice=false,showScript=false;
+try{const sd=JSON.parse(S.get("cmi.suspend_data")||"{}");if(sd.a&&sd.a.length===10)answers=sd.a;if(typeof sd.c==="number"&&sd.c<steps.length)cur=sd.c}catch(e){}
+const $=id=>document.getElementById(id),stage=$("stage");
+function save(){S.set("cmi.suspend_data",JSON.stringify({c:cur,a:answers}));S.set("cmi.core.lesson_location",String(cur));S.commit()}
+function speak(txt){if(!("speechSynthesis" in window))return;speechSynthesis.cancel();if(!voice||!txt)return;const u=new SpeechSynthesisUtterance(txt);u.lang="fr-FR";u.rate=1.0;speechSynthesis.speak(u)}
+function setScript(txt){$("script").textContent=txt||"";$("script").style.display=showScript&&txt?"block":"none"}
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function render(){
+ const s=steps[cur];stage.innerHTML="";stage.scrollTop=0;
+ $("prev").disabled=cur===0;$("next").disabled=false;
+ $("cnt").textContent=(cur+1)+" / "+steps.length;$("prog").firstChild.style.width=((cur+1)/steps.length*100)+"%";
+ let narr="";
+ if(s.t==="img"){const im=new Image();im.src="slides/s"+String(s.n).padStart(2,"0")+".jpg";im.alt=D.titles[s.n];stage.appendChild(im);narr=D.narr[s.n]}
+ else if(s.t==="defi"){const d=D.defis[s.k];narr=d.title+". "+d.q;qpanel({tag:"MINI-DÉFI",title:d.title,q:d.q,opts:d.opts,ok:[d.ok],multi:false,why:d.why,store:null})}
+ else if(s.t==="quiz"){const q=D.quiz[s.i];narr="Question "+(s.i+1)+". "+q.q;qpanel({tag:"QUESTION "+(s.i+1)+" / 10"+(q.multi?" · PLUSIEURS RÉPONSES POSSIBLES":" · UNE SEULE RÉPONSE"),title:"Quiz final",q:q.q,opts:q.opts,ok:q.ok,multi:q.multi,why:q.why,store:s.i})}
+ else result();
+ setScript(narr);speak(narr);
+ if(s.t==="quiz"||s.t==="defi"){$("next").disabled=!(s.t==="quiz"?answers[s.i]!==null:s.done)}
+ if(cur===steps.length-1)$("next").disabled=true;
+ save();
+}
+function qpanel(o){
+ const p=document.createElement("div");p.className="panel";
+ p.innerHTML='<div class="tag">'+o.tag+'</div><h2>'+esc(o.title)+'</h2><div class="q">'+esc(o.q).replace(/\n/g,"<br>")+'</div><div id="opts"></div><div id="fbk"></div><div class="row"><button id="val" disabled>Valider</button></div>';
+ stage.appendChild(p);
+ const box=p.querySelector("#opts");let sel=new Set();
+ const prev=o.store!==null?answers[o.store]:null;
+ const letters="ABCDEFGH";
+ o.opts.forEach((t,i)=>{const l=document.createElement("label");l.className="opt";
+  l.innerHTML='<input type="'+(o.multi?"checkbox":"radio")+'" name="o"><span><b>'+letters[i]+' ·</b> '+esc(t)+'</span>';
+  l.querySelector("input").onchange=e=>{if(o.multi){e.target.checked?sel.add(i):sel.delete(i)}else{sel=new Set([i]);box.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"))}
+   l.classList.toggle("sel",e.target.checked);p.querySelector("#val").disabled=sel.size===0};box.appendChild(l)});
+ function lock(chosen){
+  const good=chosen.size===o.ok.length&&o.ok.every(x=>chosen.has(x));
+  box.querySelectorAll(".opt").forEach((l,i)=>{l.querySelector("input").disabled=true;l.classList.remove("sel");
+   if(o.ok.includes(i))l.classList.add(chosen.has(i)?"good":"miss");else if(chosen.has(i))l.classList.add("bad");});
+  const f=p.querySelector("#fbk");
+  f.innerHTML='<div class="fb '+(good?"ok":"ko")+'"><b class="t">'+(good?"✓ Bonne réponse !":"✕ Pas tout à fait")+'</b>'+
+   (good?"":"<div>Bonne réponse : <b>"+o.ok.map(i=>letters[i]).join(" + ")+"</b></div>")+"<div style='margin-top:6px'>"+esc(o.why)+"</div></div>";
+  p.querySelector("#val").style.display="none";return good}
+ if(prev){sel=new Set(prev.sel);box.querySelectorAll("input").forEach((x,i)=>{x.checked=sel.has(i)});lock(sel);return}
+ if(o.store===null&&steps[cur].done){lock(new Set([o.ok[0]]));}
+ p.querySelector("#val").onclick=()=>{const good=lock(sel);
+  if(o.store!==null){answers[o.store]={sel:[...sel],good};}else steps[cur].done=true;
+  const sp=good?"Bonne réponse. ":"Pas tout à fait. ";speak(sp+o.why);setScript(sp+o.why);
+  $("next").disabled=false;
+  if(o.store!==null&&answers.every(a=>a)){finish()}
+  save();}
+}
+function score(){return answers.filter(a=>a&&a.good).length}
+function finish(){const raw=score()*10;S.set("cmi.core.score.min",0);S.set("cmi.core.score.max",100);S.set("cmi.core.score.raw",raw);
+ S.set("cmi.core.lesson_status",raw>=80?"passed":"failed");S.commit()}
+function result(){
+ const sc=score(),pass=sc>=8;if(answers.every(a=>a))finish();
+ const miss=D.quiz.map((q,i)=>[q,i]).filter(([q,i])=>!(answers[i]&&answers[i].good));
+ const p=document.createElement("div");p.className="panel";
+ p.innerHTML='<div class="tag">VOTRE RÉSULTAT</div><h2>Résultat du quiz</h2><div class="big">'+sc+' / 10</div>'+
+  '<p style="font-size:20px" class="'+(pass?"pass":"fail")+'"><b>'+(pass?"✓ RÉUSSI — module validé, bravo !":"✕ À REVOIR — seuil de réussite : 8 / 10 (80 %)")+'</b></p>'+
+  (miss.length?'<div class="tag">QUESTIONS MANQUÉES → SÉQUENCES À REVOIR</div><ul>'+miss.map(([q,i])=>"<li>Q"+(i+1)+" · "+esc(q.rev)+"</li>").join("")+"</ul>":"<p>Aucune erreur : excellent travail.</p>")+
+  '<p style="margin-top:14px"><b>Sur le terrain : je contrôle, je décide, je trace. Au moindre doute, je ne branche pas.</b></p>'+
+  '<div class="row"><button id="again">Refaire le quiz</button><button class="sec" id="rev">Revoir les séquences</button></div>';
+ stage.appendChild(p);
+ $("again").onclick=()=>{answers=new Array(10).fill(null);S.set("cmi.core.lesson_status","incomplete");cur=firstQuiz;render()};
+ $("rev").onclick=()=>{cur=0;render()};
+ if(!window._sp){}
+ speak(sc+" bonnes réponses sur 10. "+(pass?"Module validé, bravo.":"Revoyez les séquences indiquées puis refaites le quiz."));
+}
+$("next").onclick=()=>{if(cur<steps.length-1){cur++;render()}};
+$("prev").onclick=()=>{if(cur>0){cur--;render()}};
+$("tv").onclick=e=>{voice=!voice;e.target.classList.toggle("on",voice);if(!voice&&window.speechSynthesis)speechSynthesis.cancel();else render()};
+$("ts").onclick=e=>{showScript=!showScript;e.target.classList.toggle("on",showScript);render()};
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight"&&!$("next").disabled)$("next").click();if(e.key==="ArrowLeft")$("prev").click()});
+window.addEventListener("beforeunload",()=>{save();S.fin()});
+render();
+</script></body></html>
